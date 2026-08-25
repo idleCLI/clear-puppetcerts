@@ -79,7 +79,7 @@ param(
   [Parameter(ParameterSetName = "List", Mandatory)]
   [string]$ServerList,
 
-  [string]$AwxBaseUrl = "https://hni0835x.bud.morley.dev",
+  [string]$AwxBaseUrl = "https://yourpuppetserver.dev",
 
   [string]$ApiBaseOverride = "",
 
