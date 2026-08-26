@@ -1,6 +1,6 @@
 # Clear-PuppetCerts
 
-Revoking a Puppet cert is two operations, and the second is the one people forget — which is how a rebuilt host ends up rejected by a CA that still remembers the machine it replaced. This does both, through AWX, for one host or a list.
+Revoking a Puppet cert is two operations, and the second is the one people forget – which is how a rebuilt host ends up rejected by a CA that still remembers the machine it replaced. This does both, through AWX, for one host or a list.
 
 PowerShell 7+. Run it, don't dot-source it.
 
