@@ -11,6 +11,6 @@ PowerShell 7+. Run it, don't dot-source it.
 
 Run it bare and it'll ask. List files are one hostname per line; `#` comments and blanks ignored. `Get-Help .\Clear-PuppetCerts.ps1 -Full` for the rest.
 
-**Both job templates need *Prompt on Launch* enabled for variables.** Without it AWX doesn't reject the launch — it discards your variables, runs against the template's own hosts, and reports success. A green result that means nothing, with no reason to look closer. The script preflights for this and refuses to run otherwise.
+**Both job templates need *Prompt on Launch* enabled for variables.** Without it AWX doesn't reject the launch – it discards your variables, runs against the template's own hosts, and reports success. A green result that means nothing, with no reason to look closer. The script preflights for this and refuses to run otherwise.
 
 Failures are logged per host and the run continues. Exits non-zero if anything failed.
