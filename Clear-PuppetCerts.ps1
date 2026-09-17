@@ -154,15 +154,15 @@ function Read-ServerListFile {
   # Select-Object, not Sort-Object. Don't reshuffle someone's list on them.
   return @(
     Get-Content -LiteralPath $Path |
-      ForEach-Object { (ConvertTo-SafeString $_).Trim() } |
-      Where-Object { $_ -and -not $_.StartsWith("#") } |
-      Select-Object -Unique
+    ForEach-Object { (ConvertTo-SafeString $_).Trim() } |
+    Where-Object { $_ -and -not $_.StartsWith("#") } |
+    Select-Object -Unique
   )
 }
 
 $Servers = switch ($PSCmdlet.ParameterSetName) {
   "Single" { @((ConvertTo-SafeString $Server).Trim()) }
-  "List"   { Read-ServerListFile -Path $ServerList }
+  "List" { Read-ServerListFile -Path $ServerList }
   default {
     $inputValue = (ConvertTo-SafeString (Read-Host "Enter server FQDN OR path to .txt file")).Trim().Trim('"')
 
@@ -170,7 +170,8 @@ $Servers = switch ($PSCmdlet.ParameterSetName) {
 
     if (Test-Path -LiteralPath $inputValue -PathType Leaf) {
       Read-ServerListFile -Path $inputValue
-    } else {
+    }
+    else {
       @($inputValue)
     }
   }
@@ -229,13 +230,13 @@ function Invoke-AwxRest {
   )
 
   $params = $script:RestDefaults.Clone()
-  $params['Uri']    = $Uri
+  $params['Uri'] = $Uri
   $params['Method'] = $Method
 
   if ($TimeoutSec -gt 0) { $params['TimeoutSec'] = $TimeoutSec }
 
   if ($null -ne $Body) {
-    $params['Body']        = $Body | ConvertTo-Json -Depth 20
+    $params['Body'] = $Body | ConvertTo-Json -Depth 20
     $params['ContentType'] = 'application/json'
   }
 
@@ -265,7 +266,8 @@ function Get-AwxApiBase {
     try {
       Invoke-AwxRest -Uri "$candidate/ping/" | Out-Null
       return $candidate
-    } catch {
+    }
+    catch {
       $status = Get-HttpStatusCode -ErrorRecord $_
       if ($status -in 401, 403) { $sawAuthFailure = $true }
       $lastError = $_.Exception.Message
@@ -282,7 +284,8 @@ function Get-AwxApiBase {
         return ($base + $version).TrimEnd('/')
       }
     }
-  } catch {
+  }
+  catch {
     $status = Get-HttpStatusCode -ErrorRecord $_
     if ($status -in 401, 403) { $sawAuthFailure = $true }
     $lastError = $_.Exception.Message
@@ -310,7 +313,8 @@ function Test-AwxTemplateAcceptsVars {
 
   try {
     $tmpl = Invoke-AwxRest -Uri "$ApiBase/job_templates/$TemplateId/"
-  } catch {
+  }
+  catch {
     $status = Get-HttpStatusCode -ErrorRecord $_
     if ($status -eq 404) {
       throw "$Label template ID $TemplateId does not exist (HTTP 404). If this is a workflow template, it must be launched from /workflow_job_templates/ instead."
@@ -325,7 +329,8 @@ function Test-AwxTemplateAcceptsVars {
     if (-not $tmpl.ask_variables_on_launch) {
       throw "$Label template '$name' ($TemplateId) doesn't have 'Prompt on launch' enabled for variables. AWX will ignore the certname, clean the wrong host, and still report success. Enable it, or -SkipPreflight if you're sure."
     }
-  } else {
+  }
+  else {
     Write-Warning "  Could not confirm ask_variables_on_launch for $Label template $TemplateId."
   }
 }
@@ -344,16 +349,18 @@ function Invoke-AwxLaunch {
   try {
     return Invoke-AwxRest -Uri "$ApiBase/job_templates/$TemplateId/launch/" -Method Post `
       -Body @{ extra_vars = $ExtraVars }
-  } catch {
-    $status  = Get-HttpStatusCode -ErrorRecord $_
+  }
+  catch {
+    $status = Get-HttpStatusCode -ErrorRecord $_
     $message = $_.Exception.Message
 
-    throw ($status switch {
-      401     { "Launch rejected: authentication failed (HTTP 401)." }
-      403     { "Launch rejected: the account lacks Execute permission on template $TemplateId (HTTP 403)." }
-      404     { "Launch rejected: template $TemplateId not found (HTTP 404)." }
+    $reason = switch ($status) {
+      401 { "Launch rejected: authentication failed (HTTP 401)." }
+      403 { "Launch rejected: the account lacks Execute permission on template $TemplateId (HTTP 403)." }
+      404 { "Launch rejected: template $TemplateId not found (HTTP 404)." }
       default { "Launch failed for template ${TemplateId}: $message" }
-    })
+    }
+    throw $reason
   }
 }
 
@@ -386,7 +393,8 @@ function Get-AwxJobStdout {
 
   try {
     return Invoke-AwxRest -Uri "$ApiBase/jobs/$JobId/stdout/?format=$Format" -TimeoutSec 60
-  } catch {
+  }
+  catch {
     # Don't let a failed stdout fetch bury the real error.
     return "(could not retrieve stdout for job ${JobId}: $($_.Exception.Message))"
   }
@@ -409,7 +417,8 @@ function Wait-AwxJob {
     try {
       $job = Invoke-AwxRest -Uri "$ApiBase/jobs/$JobId/"
       $transientFailures = 0
-    } catch {
+    }
+    catch {
       $status = Get-HttpStatusCode -ErrorRecord $_
 
       # These won't fix themselves. Retrying burns the full timeout and then lies about why.
@@ -456,7 +465,8 @@ function Assert-ExtraVarsApplied {
 
   try {
     $parsed = $raw | ConvertFrom-Json
-  } catch {
+  }
+  catch {
     Write-Verbose "Could not parse extra_vars for $Label job: $($_.Exception.Message)"
     return
   }
@@ -466,7 +476,8 @@ function Assert-ExtraVarsApplied {
     if ($actual -ne $ExpectedCertname) {
       Write-Warning "  $Label job ran with certname '$actual' but '$ExpectedCertname' was requested."
     }
-  } else {
+  }
+  else {
     Write-Warning "  $Label job extra_vars did not include certname. The template may have discarded it."
   }
 }
@@ -484,7 +495,7 @@ function Invoke-AwxCleanupStep {
   )
 
   $launch = Invoke-AwxLaunch -ApiBase $ApiBase -TemplateId $TemplateId -ExtraVars $ExtraVars
-  $jobId  = Get-LaunchedJobId -LaunchResponse $launch
+  $jobId = Get-LaunchedJobId -LaunchResponse $launch
   Write-Host "  $Label job launched: $jobId"
 
   $job = Wait-AwxJob -ApiBase $ApiBase -JobId $jobId -PollSeconds $PollSeconds -TimeoutMinutes $TimeoutMinutes
@@ -532,8 +543,8 @@ foreach ($rawNode in $Servers) {
 
   $clientState = "skipped"
   $serverState = "not attempted"
-  $nodeFailed  = $false
-  $notes       = [System.Collections.Generic.List[string]]::new()
+  $nodeFailed = $false
+  $notes = [System.Collections.Generic.List[string]]::new()
 
   # --- 1) Client cleanup ---------------------------------------------------
   if (-not $ServerOnly) {
@@ -543,24 +554,26 @@ foreach ($rawNode in $Servers) {
         -PollSeconds $PollSeconds -TimeoutMinutes $TimeoutMinutes | Out-Null
 
       $clientState = "successful"
-    } catch {
+    }
+    catch {
       $clientState = "failed"
-      $nodeFailed  = $true
+      $nodeFailed = $true
       $notes.Add("client: $($_.Exception.Message)")
 
       Write-Warning "  Client cleanup failed for ${node}: $($_.Exception.Message)"
 
       if ($ContinueOnClientFailure) {
         Write-Warning "  Continuing to server cleanup because -ContinueOnClientFailure was specified."
-      } else {
+      }
+      else {
         Write-Warning "  Skipping server cleanup. Re-run with -ServerOnly or -ContinueOnClientFailure to revoke the cert anyway."
 
         $results.Add([pscustomobject]@{
-          Server    = $node
-          Client    = $clientState
-          Server_CA = $serverState
-          Notes     = ($notes -join " | ")
-        })
+            Server    = $node
+            Client    = $clientState
+            Server_CA = $serverState
+            Notes     = ($notes -join " | ")
+          })
         continue
       }
     }
@@ -573,9 +586,10 @@ foreach ($rawNode in $Servers) {
       -PollSeconds $PollSeconds -TimeoutMinutes $TimeoutMinutes | Out-Null
 
     $serverState = "successful"
-  } catch {
+  }
+  catch {
     $serverState = "failed"
-    $nodeFailed  = $true
+    $nodeFailed = $true
     $notes.Add("server: $($_.Exception.Message)")
     Write-Warning "  Server cleanup failed for ${node}: $($_.Exception.Message)"
   }
@@ -585,11 +599,11 @@ foreach ($rawNode in $Servers) {
   }
 
   $results.Add([pscustomobject]@{
-    Server    = $node
-    Client    = $clientState
-    Server_CA = $serverState
-    Notes     = ($notes -join " | ")
-  })
+      Server    = $node
+      Client    = $clientState
+      Server_CA = $serverState
+      Notes     = ($notes -join " | ")
+    })
 }
 
 # ---------------------------------------------------------------------------
